@@ -16,6 +16,13 @@ class Performance:
     multiplier: Multiplier to measure performance with certain frequency.
     """
 
+    class BMNotAvailableError(Exception):
+        """
+        <DESCRIPTION>
+        Exception raised when BM return data is not available.
+        """
+        pass
+
     def __init__(self,
                  pf_ret: pd.DataFrame,
                  bm_ret: pd.DataFrame,
@@ -37,6 +44,17 @@ class Performance:
     def __repr__(self):
         pass
 
+    def __call__(self):
+        """
+        <DESCRIPTION>
+        Print every performance measures and plottings.
+        """
+        self.performance_plot()
+        self.performance_plot_log_diff()
+
+        print(self.performance_table())
+        print(f"\nTuW:\n{self.performance_tuw.head(5)}")
+
     @property
     def pf_cumret(self) -> pd.DataFrame:
         """
@@ -52,6 +70,22 @@ class Performance:
         Cumulative return of the benchmark.
         """
         return (1 + self.bm_ret.fillna(0)).cumprod()
+
+    @property
+    def pf_log_cumret(self) -> pd.DataFrame:
+        """
+        <DESCRIPTION>
+        Cumulative log return of the portfolio.
+        """
+        return np.log(1 + self.pf_ret.fillna(0)).cumsum()
+
+    @property
+    def bm_log_cumret(self) -> pd.DataFrame:
+        """
+        <DESCRIPTION>
+        Cumulative log return of the benchmark.
+        """
+        return np.log(1 + self.bm_ret.fillna(0)).cumsum()
 
     def performance_validation_check(self,
                                      pf_func: Callable[[pd.DataFrame], Any],
@@ -77,8 +111,8 @@ class Performance:
         Mean value of portfolio return and benchmark return.
         """
         res = self.performance_validation_check(
-            lambda pf: np.mean(pf, axis=0)[0] * self.multiplier,
-            lambda bm: np.mean(bm, axis=0)[0] * self.multiplier
+            lambda pf: np.mean(pf, axis=0).iloc[0] * self.multiplier,
+            lambda bm: np.mean(bm, axis=0).iloc[0] * self.multiplier
         )
         return res
 
@@ -89,9 +123,10 @@ class Performance:
         Standard deviation value of portfolio return and benchmark return.
         """
         res = self.performance_validation_check(
-            lambda pf: np.std(pf, ddof=1, axis=0)[
+            lambda pf: np.std(pf, ddof=1, axis=0).iloc[
                 0] * np.sqrt(self.multiplier),
-            lambda bm: np.std(bm, ddof=1, axis=0)[0] * np.sqrt(self.multiplier)
+            lambda bm: np.std(
+                bm, ddof=1, axis=0).iloc[0] * np.sqrt(self.multiplier)
         )
         return res
 
@@ -122,14 +157,22 @@ class Performance:
         return res
 
     @property
+    def performance_calmar_ratio(self) -> list:
+        res = self.performance_validation_check(
+            lambda pf: self.performance_cagr[0] / abs(self.performance_mdd[0]),
+            lambda bm: self.performance_cagr[1] / abs(self.performance_mdd[1])
+        )
+        return res
+
+    @property
     def performance_mdd(self) -> list:
         """
         <DESCRIPTION>
         MDD of portfolio return and benchmark return.
         """
         res = self.performance_validation_check(
-            lambda pf: np.min(self.pf_dd, axis=0)[0],
-            lambda bm: np.min(self.bm_dd, axis=0)[0]
+            lambda pf: np.min(self.pf_dd, axis=0).iloc[0],
+            lambda bm: np.min(self.bm_dd, axis=0).iloc[0]
         )
         return res
 
@@ -157,6 +200,25 @@ class Performance:
         )
         return res
 
+    @property
+    def performance_tuw(self) -> pd.DataFrame:
+        """
+        <DESCRIPTION>
+        Time under water of portfolio return.
+        """
+        df = pd.DataFrame()
+
+        df['Underwater'] = self.pf_dd < 0
+        df['Underwater_group'] = (
+            df['Underwater'] != df['Underwater'].shift(periods=1)).cumsum()
+        res = df[df['Underwater']].groupby('Underwater_group').agg(
+            Start_date=('Underwater', lambda x: x.index.min()),
+            End_date=('Underwater', lambda x: x.index.max()),
+            Duration=('Underwater', 'size')
+        ).sort_values(by='Duration',
+                      ascending=False).reset_index(drop=True)
+        return res
+
     def performance_table(self) -> pd.DataFrame:
         """
         <DESCRIPTION>
@@ -179,6 +241,7 @@ class Performance:
                  performance_pct_chg(self.performance_std),
                  performance_pct_chg(self.performance_cagr),
                  np.round(self.performance_sharpe_ratio, 4),
+                 np.round(self.performance_calmar_ratio, 4),
                  performance_pct_chg(self.performance_mdd),
                  performance_pct_chg(self.performance_hit_ratio),
                  performance_pct_chg(self.performance_cumret)]
@@ -190,6 +253,7 @@ class Performance:
                                   'Standard Deviation (%)',
                                   'CAGR (%)',
                                   'Sharpe Ratio',
+                                  'Calmar Ratio',
                                   'MDD (%)',
                                   'Hit Ratio (%)',
                                   'CumRet (%)'])
@@ -246,10 +310,53 @@ class Performance:
         plt.tight_layout()
         plt.show()
 
+    def performance_plot_log_diff(self) -> plt.plot:
+        """
+        <DESCRIPTION>
+        Plot cumulative log return and MDD of the difference between portfolio and benchmark.
+        """
+        fig, axs = plt.subplots(2, 1,
+                                sharex=True,
+                                gridspec_kw={'height_ratios': [2, 1]})
+        if self.bm_ret is not None:
+            log_diff = pd.DataFrame(self.pf_log_cumret.values - self.bm_log_cumret.values,
+                                    index=self.pf_log_cumret.index)
+            log_diff_dd = Tools.get_drawdown(cumret=log_diff)
+
+            axs[0].plot(log_diff,
+                        label='Log difference between Portfolio and BM',
+                        color='blue',
+                        linewidth=1.5,
+                        linestyle='-')
+            axs[0].set_ylabel('Cumulative log return difference')
+            axs[0].set_title(
+                'Portfolio versus BM cumulative log return difference')
+            axs[0].legend(loc='best')
+
+            axs[1].plot(log_diff_dd,
+                        label='Log difference drawdown',
+                        color='blue',
+                        linewidth=1.5,
+                        linestyle='-')
+            axs[1].fill_between(log_diff_dd.index.to_pydatetime(),
+                                log_diff_dd.values.flatten(),
+                                color='blue',
+                                alpha=0.1)
+            axs[1].set_ylabel('Drawdown')
+            axs[1].set_xlabel('Date')
+
+            plt.tight_layout()
+            plt.show()
+
+        else:
+            raise self.BMNotAvailableError(
+                "Benchmark return data is not available.")
+
 
 if __name__ == "__main__":
     ret = pd.read_pickle('./ret.pkl')
+    # bm = pd.read_pickle('./bm.pkl')
 
     perf = Performance(pf_ret=ret,
-                       bm_ret=None,
+                       bm_ret=ret,
                        multiplier='D')
