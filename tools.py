@@ -49,7 +49,7 @@ class Tools:
         drawdown.replace([np.inf, -np.inf], np.nan, inplace=True)
         drawdown.fillna(0, inplace=True)
         return drawdown
-    
+
     @staticmethod
     def get_rolling_ret(ret: pd.DataFrame,
                         window: int,
@@ -57,7 +57,7 @@ class Tools:
         """
         <DESCRIPTION>
         Get average rolling return of the portfolio.
-        
+
         <PARAMS>
         ret: Return of the portfolio.
         window: Size of the rolling window.
@@ -65,25 +65,27 @@ class Tools:
         """
         rolling_ret = ret.rolling(window * multiplier).mean().dropna(axis=0)
         return rolling_ret
-    
+
     @staticmethod
     def get_common_layout(title: str) -> dict:
         """
         <DESCRIPTION>
         Get common layout for plots.
-        
+
         <PARAMS>
         title: Title of the plot.
         """
         return dict(title=title,
                     margin=dict(l=20, r=20, t=40, b=20),
-                    height=600, 
+                    height=600,
                     width=1000,
                     plot_bgcolor='white',
-                    xaxis=dict(showgrid=True, gridcolor='rgba(200, 200, 200, 0.5)'),
-                    yaxis=dict(showgrid=True, gridcolor='rgba(200, 200, 200, 0.5)'),
+                    xaxis=dict(showgrid=True,
+                               gridcolor='rgba(200, 200, 200, 0.5)'),
+                    yaxis=dict(showgrid=True,
+                               gridcolor='rgba(200, 200, 200, 0.5)'),
                     legend=dict(orientation='h',
-                                yanchor='top', 
-                                y=-0.2, 
-                                xanchor='right', 
+                                yanchor='top',
+                                y=-0.2,
+                                xanchor='right',
                                 x=1))

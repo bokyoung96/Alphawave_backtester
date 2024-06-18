@@ -1,3 +1,7 @@
+# temporary files
+bm_ash.pkl
+ret_ash.pkl
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
