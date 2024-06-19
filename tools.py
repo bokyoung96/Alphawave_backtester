@@ -53,7 +53,8 @@ class Tools:
     @staticmethod
     def get_rolling_ret(ret: pd.DataFrame,
                         window: int,
-                        multiplier: int):
+                        multiplier: int,
+                        roll_type: str):
         """
         <DESCRIPTION>
         Get average rolling return of the portfolio.
@@ -63,7 +64,11 @@ class Tools:
         window: Size of the rolling window.
         multiplier: Multiplier of the portfolio considering frequency.
         """
-        rolling_ret = ret.rolling(window * multiplier).mean().dropna(axis=0)
+        if roll_type == 'mean':
+            rolling_ret = ret.rolling(
+                window * multiplier).mean().dropna(axis=0)
+        elif roll_type == 'std':
+            rolling_ret = ret.rolling(window * multiplier).std().dropna(axis=0)
         return rolling_ret
 
     @staticmethod

@@ -31,13 +31,22 @@ class Performance:
     def __init__(self,
                  pf_ret: pd.DataFrame,
                  bm_ret: pd.DataFrame,
-                 multiplier: str = 'D'):
+                 multiplier: str = 'D',
+                 roll_multiplier: str = '6M'):
         multiplier_dict = {'Y': 252,
                            'M': 21,
                            'D': 1}
         self.multiplier_ = multiplier
         self.multiplier = Tools.validation_params_dict(value=multiplier,
                                                        valid_values=multiplier_dict)
+
+        roll_multiplier_dict = {'Y': 12,
+                                '9M': 9,
+                                '6M': 6,
+                                '3M': 3}
+        self.roll_multiplier_ = roll_multiplier
+        self.roll_multiplier = Tools.validation_params_dict(value=roll_multiplier,
+                                                            valid_values=roll_multiplier_dict)
 
         self.pf_ret = pf_ret.astype(float)
         self.bm_ret = bm_ret.astype(float) if bm_ret is not None else None
@@ -259,12 +268,16 @@ class Performance:
         df['Underwater'] = self.pf_dd < 0
         df['Underwater_group'] = (
             df['Underwater'] != df['Underwater'].shift(periods=1)).cumsum()
+
         res = df[df['Underwater']].groupby('Underwater_group').agg(
-            Start_date=('Underwater', lambda x: x.index.min()),
-            End_date=('Underwater', lambda x: x.index.max()),
+            StartDate=('Underwater', lambda x: x.index.min()),
+            EndDate=('Underwater', lambda x: x.index.max()),
             Duration=('Underwater', 'size')
         ).sort_values(by='Duration',
                       ascending=False).reset_index(drop=True)
+        res['StartDate'] = res['StartDate'].dt.strftime('%Y-%m-%d')
+        res['EndDate'] = res['EndDate'].dt.strftime('%Y-%m-%d')
+        res.index.name = 'OrderBy'
         return res
 
     @property
@@ -290,6 +303,7 @@ class Performance:
             res['BM'] = np.nan
             res['ExcessRet'] = np.nan
 
+        res.index = res.index.astype(str)
         res.index.name = 'Year'
         res = np.round(res, 4)
         return res
@@ -354,7 +368,7 @@ class Performance:
             subplot_titles=(None, None))
 
         fig.add_trace(go.Scatter(x=self.pf_cumret.index,
-                                 y=self.pf_cumret.values.flatten(),
+                                 y=round(self.pf_cumret, 4).values.flatten(),
                                  mode='lines',
                                  name='Portfolio',
                                  line=dict(color='red')),
@@ -362,7 +376,8 @@ class Performance:
                       col=1)
         if self.bm_ret is not None:
             fig.add_trace(go.Scatter(x=self.bm_cumret.index,
-                                     y=self.bm_cumret.values.flatten(),
+                                     y=round(self.bm_cumret,
+                                             4).values.flatten(),
                                      mode='lines',
                                      name='Benchmark',
                                      line=dict(color='black')),
@@ -376,14 +391,14 @@ class Performance:
                       col=1)
 
         fig.add_trace(go.Scatter(x=self.pf_dd.index,
-                                 y=self.pf_dd.values.flatten(),
+                                 y=round(self.pf_dd, 4).values.flatten(),
                                  mode='lines',
                                  name='Portfolio Drawdown',
                                  line=dict(color='red', dash='dot')),
                       row=2,
                       col=1)
         fig.add_trace(go.Scatter(x=self.pf_dd.index,
-                                 y=self.pf_dd.values.flatten(),
+                                 y=round(self.pf_dd, 4).values.flatten(),
                                  fill='tozeroy',
                                  mode='none',
                                  fillcolor='rgba(255, 0, 0, 0.2)',
@@ -392,14 +407,14 @@ class Performance:
                       col=1)
         if self.bm_ret is not None:
             fig.add_trace(go.Scatter(x=self.bm_dd.index,
-                                     y=self.bm_dd.values.flatten(),
+                                     y=round(self.bm_dd, 4).values.flatten(),
                                      mode='lines',
                                      name='Benchmark Drawdown',
                                      line=dict(color='black', dash='dot')),
                           row=2,
                           col=1)
             fig.add_trace(go.Scatter(x=self.bm_dd.index,
-                                     y=self.bm_dd.values.flatten(),
+                                     y=round(self.bm_dd, 4).values.flatten(),
                                      fill='tozeroy',
                                      mode='none',
                                      fillcolor='rgba(0, 0, 0, 0.2)',
@@ -419,8 +434,8 @@ class Performance:
         for _, row in self.performance_tuw[:3].iterrows():
             fig.add_shape(type="rect",
                           xref="x", yref="paper",
-                          x0=row['Start_date'], y0=y_min,
-                          x1=row['End_date'], y1=y_max,
+                          x0=row['StartDate'], y0=y_min,
+                          x1=row['EndDate'], y1=y_max,
                           fillcolor="LightSalmon",
                           opacity=0.15,
                           layer="below",
@@ -450,7 +465,8 @@ class Performance:
             subplot_titles=(None, None))
 
         fig.add_trace(go.Scatter(x=self.pf_log_cumret.index,
-                                 y=self.pf_log_cumret.values.flatten(),
+                                 y=round(self.pf_log_cumret,
+                                         4).values.flatten(),
                                  mode='lines',
                                  name='Portfolio',
                                  line=dict(color='red')),
@@ -458,7 +474,8 @@ class Performance:
                       col=1)
         if self.bm_ret is not None:
             fig.add_trace(go.Scatter(x=self.bm_log_cumret.index,
-                                     y=self.bm_log_cumret.values.flatten(),
+                                     y=round(self.bm_log_cumret,
+                                             4).values.flatten(),
                                      mode='lines',
                                      name='Benchmark',
                                      line=dict(color='black')),
@@ -473,7 +490,7 @@ class Performance:
                       col=1)
 
         if self.bm_ret is not None:
-            log_diff = pd.DataFrame(self.pf_log_cumret.values - self.bm_log_cumret.values,
+            log_diff = pd.DataFrame(np.round(self.pf_log_cumret.values - self.bm_log_cumret.values, 4),
                                     index=self.pf_log_cumret.index)
             fig.add_trace(go.Scatter(x=log_diff.index,
                                      y=log_diff.values.flatten(),
@@ -511,17 +528,21 @@ class Performance:
         """
         pf_rolling_ret_1m = Tools.get_rolling_ret(ret=self.pf_ret,
                                                   window=1,
-                                                  multiplier=21) * 100
+                                                  multiplier=21,
+                                                  roll_type='mean') * 100
         bm_rolling_ret_1m = Tools.get_rolling_ret(ret=self.bm_ret,
                                                   window=1,
-                                                  multiplier=21) * 100 if self.bm_ret is not None else None
+                                                  multiplier=21,
+                                                  roll_type='mean') * 100 if self.bm_ret is not None else None
 
         pf_rolling_ret_3m = Tools.get_rolling_ret(ret=self.pf_ret,
                                                   window=3,
-                                                  multiplier=21) * 100
+                                                  multiplier=21,
+                                                  roll_type='mean') * 100
         bm_rolling_ret_3m = Tools.get_rolling_ret(ret=self.bm_ret,
                                                   window=3,
-                                                  multiplier=21) * 100 if self.bm_ret is not None else None
+                                                  multiplier=21,
+                                                  roll_type='mean') * 100 if self.bm_ret is not None else None
 
         fig = make_subplots(rows=1,
                             cols=2,
@@ -587,6 +608,63 @@ class Performance:
         fig.update_xaxes(title_text='3-Month Rolling Return (%)', row=1, col=2)
         return fig
 
+    def performance_plot_rolling_sharpe(self) -> go.Figure:
+        """
+        <DESCRIPTION>
+        Plot rolling sharpe ratio of portfolio and benchmark.
+        """
+        pf_rolling_mean = Tools.get_rolling_ret(ret=self.pf_ret,
+                                                window=self.roll_multiplier,
+                                                multiplier=21,
+                                                roll_type='mean')
+        pf_rolling_std = Tools.get_rolling_ret(ret=self.pf_ret,
+                                               window=self.roll_multiplier,
+                                               multiplier=21,
+                                               roll_type='std')
+
+        bm_rolling_mean = Tools.get_rolling_ret(ret=self.bm_ret,
+                                                window=self.roll_multiplier,
+                                                multiplier=21,
+                                                roll_type='mean') if self.bm_ret is not None else None
+        bm_rolling_std = Tools.get_rolling_ret(ret=self.bm_ret,
+                                               window=self.roll_multiplier,
+                                               multiplier=21,
+                                               roll_type='std') if self.bm_ret is not None else None
+
+        pf_rolling_sharpe = round(
+            (pf_rolling_mean / pf_rolling_std) * self.multiplier, 4)
+        bm_rolling_sharpe = round(
+            (bm_rolling_mean / bm_rolling_std) * self.multiplier, 4)
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(
+            x=pf_rolling_sharpe.index,
+            y=pf_rolling_sharpe.values.flatten(),
+            mode='lines',
+            name='Portfolio',
+            line=dict(color='red')
+        ))
+
+        if self.bm_ret is not None:
+            fig.add_trace(go.Scatter(x=bm_rolling_sharpe.index,
+                                     y=bm_rolling_sharpe.values.flatten(),
+                                     mode='lines',
+                                     name='Benchmark',
+                                     line=dict(color='black')))
+
+        fig.add_hline(y=0,
+                      line=dict(color='rgba(0, 0, 0, 0.5)',
+                                width=1,
+                                dash='dash'))
+
+        fig.update_layout(
+            **Tools.get_common_layout(title=f'Rolling Sharpe Ratio (Window {self.roll_multiplier_}, Frequency {self.multiplier_})'),
+            yaxis_title='Sharpe Ratio',
+            xaxis_title='Date'
+        )
+        return fig
+
     def performance_plot_eoy(self) -> go.Figure:
         """
         <DESCRIPTION>
@@ -626,6 +704,111 @@ class Performance:
                       line=dict(color='black', width=1))
         return fig
 
+    def performance_plot_ret_specific(self) -> go.Figure:
+        """
+        <DESCRIPTION>
+        Plot return boxplot, heatmap of portfolio and benchmark.
+        """
+        fig = make_subplots(rows=1, cols=2,
+                            subplot_titles=(None, None))
+
+        daily_ret = self.pf_ret
+        weekly_ret = self.pf_ret.resample(
+            'W').apply(lambda x: (x + 1).prod() - 1)
+        monthly_ret = self.pf_ret.resample(
+            'M').apply(lambda x: (x + 1).prod() - 1)
+        quarterly_ret = self.pf_ret.resample(
+            'Q').apply(lambda x: (x + 1).prod() - 1)
+        yearly_ret = self.pf_ret.resample(
+            'Y').apply(lambda x: (x + 1).prod() - 1)
+
+        colors = [
+            'rgba(31, 119, 180, 0.2)',
+            'rgba(31, 119, 180, 0.4)',
+            'rgba(31, 119, 180, 0.6)',
+            'rgba(31, 119, 180, 0.8)',
+            'rgba(31, 119, 180, 1.0)'
+        ]
+
+        fig.add_trace(go.Box(
+            y=daily_ret.squeeze() * 100,
+            name='Daily',
+            boxmean='sd',
+            marker_color=colors[0],
+            hovertemplate='%{y:.4f}%'
+        ), row=1, col=1)
+
+        fig.add_trace(go.Box(
+            y=weekly_ret.squeeze() * 100,
+            name='Weekly',
+            boxmean='sd',
+            marker_color=colors[1],
+            hovertemplate='%{y:.4f}%'
+        ), row=1, col=1)
+
+        fig.add_trace(go.Box(
+            y=monthly_ret.squeeze() * 100,
+            name='Monthly',
+            boxmean='sd',
+            marker_color=colors[2],
+            hovertemplate='%{y:.4f}%'
+        ), row=1, col=1)
+
+        fig.add_trace(go.Box(
+            y=quarterly_ret.squeeze() * 100,
+            name='Quarterly',
+            boxmean='sd',
+            marker_color=colors[3],
+            hovertemplate='%{y:.4f}%'
+        ), row=1, col=1)
+
+        fig.add_trace(go.Box(
+            y=yearly_ret.squeeze() * 100,
+            name='Yearly',
+            boxmean='sd',
+            marker_color=colors[4],
+            hovertemplate='%{y:.4f}%'
+        ), row=1, col=1)
+
+        pf_ret_monthly = monthly_ret.copy()
+        pf_ret_monthly['Year'] = pf_ret_monthly.index.year
+        pf_ret_monthly['Month'] = pf_ret_monthly.index.strftime('%b')
+        pf_ret_pivot = pf_ret_monthly.pivot_table(
+            values='Portfolio', index='Year', columns='Month', aggfunc='sum')
+        pf_ret_pivot = pf_ret_pivot.sort_index(ascending=False)
+        months_order = ['Jan', 'Feb', 'Mar', 'Apr', 'May',
+                        'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+        pf_ret_pivot = pf_ret_pivot[months_order]
+        pf_ret_pivot = pf_ret_pivot * 100
+        pf_ret_pivot = np.round(pf_ret_pivot, 2)
+
+        fig.add_trace(go.Heatmap(
+            z=pf_ret_pivot.values,
+            x=pf_ret_pivot.columns,
+            y=pf_ret_pivot.index,
+            colorscale='RdYlGn',
+            zmin=-30,
+            zmax=30,
+            text=pf_ret_pivot.values,
+            texttemplate='%{text:.1f}%',
+            textfont={"size": 10},
+            showscale=False
+        ), row=1, col=2)
+
+        fig.update_layout(
+            **Tools.get_common_layout(title="Return Analysis (%)"),
+            yaxis_title='Return (%)',
+            xaxis_title='Frequency',
+            showlegend=False
+        )
+
+        fig.update_xaxes(title_text="Frequency", row=1, col=1)
+        fig.update_yaxes(title_text="Return (%)", row=1, col=1)
+        fig.update_xaxes(title_text="Month", row=1, col=2)
+        fig.update_yaxes(title_text="Year", row=1, col=2, autorange="reversed")
+        return fig
+
 
 if __name__ == "__main__":
     ret = pd.read_pickle('./ret.pkl')
@@ -633,4 +816,5 @@ if __name__ == "__main__":
 
     perf = Performance(pf_ret=ret,
                        bm_ret=bm,
-                       multiplier='D')
+                       multiplier='D',
+                       roll_multiplier='6M')
