@@ -31,13 +31,13 @@ class Performance:
     def __init__(self,
                  pf_ret: pd.DataFrame,
                  bm_ret: pd.DataFrame,
-                 multiplier: str = 'D',
+                 performance_multiplier: str = 'D',
                  roll_multiplier: str = '6M'):
         multiplier_dict = {'Y': 252,
                            'M': 21,
                            'D': 1}
-        self.multiplier_ = multiplier
-        self.multiplier = Tools.validation_params_dict(value=multiplier,
+        self.multiplier_ = performance_multiplier
+        self.multiplier = Tools.validation_params_dict(value=performance_multiplier,
                                                        valid_values=multiplier_dict)
 
         roll_multiplier_dict = {'Y': 12,
@@ -57,12 +57,15 @@ class Performance:
 
     def __call__(self):
         """
+        <DESCRIPTION>
         Print every performance measures and plottings.
         """
         self.performance_plot().show()
         self.performance_plot_log_diff().show()
         self.performance_plot_rolling_ret().show()
         self.performance_plot_eoy().show()
+        self.performance_plot_rolling_sharpe().show()
+        self.performance_plot_ret_specific().show()
 
         print(self.performance_table())
         print(f"\nTuW:\n{self.performance_tuw.head(5)}")
@@ -811,8 +814,8 @@ class Performance:
 
 
 if __name__ == "__main__":
-    ret = pd.read_pickle('./ret.pkl')
-    bm = pd.read_pickle('./bm.pkl')
+    ret = pd.read_pickle('./sample_data/ret.pkl')
+    bm = pd.read_pickle('./sample_data/bm.pkl')
 
     perf = Performance(pf_ret=ret,
                        bm_ret=bm,
