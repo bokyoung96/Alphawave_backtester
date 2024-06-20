@@ -39,6 +39,7 @@ class Contribution:
         self.end_date = end_date
 
         # NOTE: Should be refactored afterwards.
+        # NOTE: Contact BKChoi for datas - LFS required.
         self.price = pd.read_pickle(
             './loader_data/KOSPI_stock_price_c_1d_quantiwise.pkl')
         self.names = pd.read_pickle('./loader_data/KOSPI_names_quantiwise.pkl')

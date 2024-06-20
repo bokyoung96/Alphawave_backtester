@@ -819,5 +819,5 @@ if __name__ == "__main__":
 
     perf = Performance(pf_ret=ret,
                        bm_ret=bm,
-                       multiplier='D',
+                       performance_multiplier='D',
                        roll_multiplier='6M')
