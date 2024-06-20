@@ -1,9 +1,10 @@
 import streamlit as st
 
 from performance import *
+from contribution import *
 
 
-class StreamlitUploader(Performance):
+class StreamlitUploader(Performance, Contribution):
     """
     <DESCRIPTION>
     Upload performance measures to web using streamlit.
@@ -12,11 +13,19 @@ class StreamlitUploader(Performance):
     def __init__(self,
                  pf_ret: pd.DataFrame,
                  bm_ret: pd.DataFrame,
-                 multiplier: str = 'Y',
-                 roll_multiplier: str = '6M'):
-        super().__init__(pf_ret, bm_ret, multiplier, roll_multiplier)
+                 performance_multiplier: str,
+                 roll_multiplier: str,
+                 weight: pd.DataFrame,
+                 contribution_multiplier: str,
+                 start_date: str,
+                 end_date: str):
+        Performance.__init__(self, pf_ret, bm_ret,
+                             performance_multiplier, roll_multiplier)
+        Contribution.__init__(
+            self, weight, contribution_multiplier, start_date, end_date)
         self.pf_ret = pf_ret
         self.bm_ret = bm_ret
+        self.weight = weight
 
     def upload(self):
         """
@@ -76,3 +85,38 @@ class StreamlitUploader(Performance):
                 performance_eoy = performance_eoy * 100
                 st.dataframe(performance_eoy.style.format(
                     "{:.2f}%"), use_container_width=True)
+
+        st.divider()
+        st.markdown("<h1 id='contribution-analysis' style='text-align: center; color: black; font-size: 24px;'>Contribution Analysis</h1>",
+                    unsafe_allow_html=True)
+
+        if self.weight is not None:
+            with st.expander("Return Contribution Tables", expanded=True):
+                tabs_w = st.tabs(["Return Contributors",
+                                  "Return Contributors Plot",
+                                  "Sector Contributions"])
+                with tabs_w[0]:
+                    st.caption('Top Return Contributors')
+                    contr_w = self.contribution_w(top=True).copy() * 100
+                    st.dataframe(contr_w.style.format(
+                        "{:.2f}%"), use_container_width=True)
+
+                    st.caption('Bottom Return Contributors')
+                    contr_w = self.contribution_w(top=False).copy() * 100
+                    st.dataframe(contr_w.style.format(
+                        "{:.2f}%"), use_container_width=True)
+
+                with tabs_w[1]:
+                    st.caption('Top Return Contributors Plot')
+                    st.plotly_chart(self.contribution_plot_w_ticker(
+                        top=True), use_container_width=True)
+
+                    st.caption('Bottom Return Contributors Plot')
+                    st.plotly_chart(self.contribution_plot_w_ticker(
+                        top=False), use_container_width=True)
+
+                with tabs_w[2]:
+                    st.write("WIP")
+        else:
+            st.warning(
+                "Contribution analysis is skipped since weight data was not uploaded. Please upload weight data to view the contribution analysis.")
