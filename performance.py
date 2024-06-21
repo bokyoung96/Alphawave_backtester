@@ -18,7 +18,8 @@ class Performance:
     <PARAMS>
     pf_ret: Return of the portfolio.
     bm_ret: Return of the benchmark. If None, bm_ret will not be calculated.
-    multiplier: Multiplier to measure performance with certain frequency.
+    performance_multiplier: Multiplier to measure performance with certain frequency.
+    roll_multiplier: Multiplier to measure rolling performance with certain frequency.
     """
 
     class BMNotAvailableError(Exception):
@@ -243,8 +244,8 @@ class Performance:
         Hit ratio of portfolio return and benchmark return.
         """
         res = self.performance_validation_check(
-            lambda pf: len(pf[pf >= 0].dropna()) / len(pf),
-            lambda bm: len(bm[bm >= 0].dropna()) / len(bm)
+            lambda pf: len(pf[pf > 0].dropna()) / len(pf),
+            lambda bm: len(bm[bm > 0].dropna()) / len(bm)
         )
         return res
 

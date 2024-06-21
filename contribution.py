@@ -3,8 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
-from matplotlib import cm
 from matplotlib.colors import to_hex
+from plotly.subplots import make_subplots
 
 from tools import *
 
@@ -28,7 +28,7 @@ class Contribution:
         multiplier_dict = {'Y': 252,
                            'M': 21,
                            'D': 1}
-        self.multiplier_ = contribution_multiplier
+        self.contribution_multiplier_ = contribution_multiplier
         self.multiplier = Tools.validation_params_dict(value=contribution_multiplier,
                                                        valid_values=multiplier_dict)
 
@@ -43,6 +43,8 @@ class Contribution:
         self.price = pd.read_pickle(
             './loader_data/KOSPI_stock_price_c_1d_quantiwise.pkl')
         self.names = pd.read_pickle('./loader_data/KOSPI_names_quantiwise.pkl')
+        self.sectors = pd.read_pickle(
+            './loader_data/KOSPI_sectors_quantiwise.pkl')
 
     @property
     def w(self) -> pd.DataFrame:
@@ -64,6 +66,9 @@ class Contribution:
         """
         <DESCRIPTION>
         Calculate the contribution of each PDF.
+
+        <PARAMS>
+        top: Select whether to show top or the bottom.
         """
         w = self.w.loc[self.start_date: self.end_date]
         code = w['Code'].unique()
@@ -77,20 +82,21 @@ class Contribution:
         res_cumret = cumret.iloc[-1, :]
 
         res = pd.concat([res_ret, res_cumret], axis=1)
-        res.columns = [f"MeanRet ({self.multiplier_})",
+        res.columns = [f"MeanRet ({self.contribution_multiplier_})",
                        "CumRet"]
-        res[f"MeanRet ({self.multiplier_})"] = res[f"MeanRet ({self.multiplier_})"] * \
-            self.multiplier
-
-        res.sort_values(by='CumRet',
-                        ascending=False,
-                        inplace=True)
+        res[f"MeanRet ({self.contribution_multiplier_})"] = res[f"MeanRet ({self.contribution_multiplier_})"] * self.multiplier
         res.index.name = 'Ticker'
 
         if top:
             res = res.head(10)
         else:
             res = res.tail(10)
+
+        for df in [self.sectors, self.names]:
+            res = pd.merge(df, res, how='inner',
+                           left_index=True,
+                           right_index=True).sort_values(by="CumRet",
+                                                         ascending=False)
         return res
 
     def contribution_plot_w_ticker(self,
@@ -98,6 +104,9 @@ class Contribution:
         """
         <DESCRIPTION>
         Plot top contributors of the PDF.
+
+        <PARAMS>
+        top: Select whether to show top or the bottom.
         """
         tickers = self.contribution_w(top=top).index
         price = self.price[tickers].loc[self.start_date: self.end_date]
@@ -130,6 +139,37 @@ class Contribution:
                               yaxis_title='Cumulative Return',
                               xaxis_title='Year')
 
+        return fig
+
+    def contribution_plot_w_sector(self,
+                                   top: bool = True) -> go.Figure:
+        """
+        <DESCRIPTION>
+        Plot top contributor sectors of the PDF.
+
+        <PARAMS>
+        top: Select whether to show top or the bottom.
+        """
+        sectors = self.contribution_w(
+            top=top)['Sector'].value_counts().reset_index()
+        sectors.columns = ['Sector', 'count']
+
+        fig = go.Figure()
+        fig.add_trace(go.Pie(
+            labels=sectors['Sector'],
+            values=sectors['count'],
+            hole=0.4,
+            pull=[0.1] * len(sectors),
+            textinfo='percent+label',
+            marker=dict(line=dict(color='white', width=2))
+        ))
+
+        if top:
+            fig.update_layout(
+                **Tools.get_common_layout(title='Top Sector Distribution'))
+        else:
+            fig.update_layout(
+                **Tools.get_common_layout(title='Bottom Sector Distribution'))
         return fig
 
 
