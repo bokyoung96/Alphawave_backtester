@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import datetime as dt
 
-
 from typing import *
 
 
@@ -94,3 +93,14 @@ class Tools:
                                 y=-0.2,
                                 xanchor='right',
                                 x=1))
+
+    @staticmethod
+    def format_pct(value: format) -> str:
+        """
+        <DESCRIPTION>
+        Get percentage format for values.
+
+        <PARAMS>
+        value: The value to be formatted as a percentage.
+        """
+        return f"{value * 100:.2f}%"
