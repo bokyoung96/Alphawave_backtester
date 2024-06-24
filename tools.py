@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import datetime as dt
 
+
 from typing import *
 
 
@@ -53,7 +54,8 @@ class Tools:
     def get_rolling_ret(ret: pd.DataFrame,
                         window: int,
                         multiplier: int,
-                        roll_type: str):
+                        roll_type: str,
+                        bm_ret: pd.DataFrame = None):
         """
         <DESCRIPTION>
         Get average rolling return of the portfolio.
@@ -62,12 +64,18 @@ class Tools:
         ret: Return of the portfolio.
         window: Size of the rolling window.
         multiplier: Multiplier of the portfolio considering frequency.
+        df: Benchmark return to use when calculating rolling correlation.
         """
         if roll_type == 'mean':
             rolling_ret = ret.rolling(
                 window * multiplier).mean().dropna(axis=0)
         elif roll_type == 'std':
             rolling_ret = ret.rolling(window * multiplier).std().dropna(axis=0)
+        elif roll_type == 'corr':
+            if bm_ret is None:
+                return None
+            rolling_ret = ret.dropna().iloc[:, 0].rolling(
+                window * multiplier).corr(bm_ret.dropna().iloc[:, 0]).dropna(axis=0)
         return rolling_ret
 
     @staticmethod
@@ -104,3 +112,19 @@ class Tools:
         value: The value to be formatted as a percentage.
         """
         return f"{value * 100:.2f}%"
+
+    @staticmethod
+    def df_chgr(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        <DESCRIPTION>
+        Change the value of numbers in dataframe into 1, leaving NaN as NaN.
+
+        <PARAMS>
+        df: Dataframe to be cahnged.
+        """
+        df_vals = df.values
+        df_vals[~np.isnan(df_vals)] = 1
+        res = pd.DataFrame(df_vals,
+                           index=df.index,
+                           columns=df.columns)
+        return res
