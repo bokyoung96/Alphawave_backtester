@@ -85,7 +85,7 @@ def run():
             weight_data = None
             start_date = None
             end_date = None
-            contribution_multiplier = 'Y'
+            contribution_multiplier = 'D'
 
             if not skip_weight:
                 if weight_file is not None:
@@ -101,7 +101,7 @@ def run():
                                              value=max_date,
                                              help=f'Select an end date (min: {min_date.date()}, max: {max_date.date()})')
                     contribution_multiplier = st.selectbox('Select multiplier',
-                                                           ['Y', 'M', 'D'],
+                                                           ['D', 'M', 'Y'],
                                                            help='Select the time frequency to adjust contribution metrics')
 
             logging.info("Uploaded file: %s",

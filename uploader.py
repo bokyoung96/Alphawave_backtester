@@ -56,7 +56,11 @@ class StreamlitUploader(Performance, Contribution):
             st.plotly_chart(self.performance_plot_rolling_sharpe(),
                             use_container_width=True)
 
-        with st.expander("Return Analysis", expanded=True):
+        with st.expander("Rolling Correlation", expanded=True):
+            st.plotly_chart(self.performance_plot_rolling_corr(),
+                            use_container_width=True)
+
+        with st.expander("Additional Return Analysis", expanded=True):
             st.plotly_chart(self.performance_plot_ret_specific(),
                             use_container_width=True)
 
@@ -93,51 +97,68 @@ class StreamlitUploader(Performance, Contribution):
         if self.weight is not None:
             with st.expander("Contribution Metrics Tables", expanded=True):
                 st.markdown("""
-                            <div style="background-color: #fff3cd; padding: 10px; border-left: 5px solid #ffeeba;">
-                                <strong>Note:</strong> This table shows the return and sector classification of the stocks that had the highest returns 
-                                within the set start and end dates, and were held at least once during this period.<br>
-                                The actual contribution analysis based on the holding period is still under development.
-                            </div>
-                            """, unsafe_allow_html=True)
+    <div style="background-color: #fff3cd; padding: 10px; border-left: 5px solid #ffeeba;">
+        <strong>Note:</strong> The following abbreviations are used in the Return Contributors table columns:
+        <ul>
+            <li>HP: Holding Period</li>
+            <li>WP: Whole Period</li>
+            <li>WA: Weight Adjusted</li>
+            <li>WU: Weight Unadjusted</li>
+            <li>SUM: Summation of returns</li>
+            <li>MEAN: Average return with multiplier Y / M / D</li>
+            <li>CUMUL: Cumulative return</li>
+        </ul>
+        <br>
+        <strong>Example:</strong> HP / WA / SUM indicates the sum of the asset's returns, weighted by the proportion of the asset held, during the holding period from the start date to the end date.
+    </div>
+    """, unsafe_allow_html=True)
 
                 tabs_w = st.tabs(["Return Contributors",
                                   "Return Contributors Plot",
-                                  "Sector Contributions"])
+                                  "Sector Contributions",
+                                  "Number Invested / Turnover"])
                 with tabs_w[0]:
                     st.caption('Top Return Contributors')
-                    contr_w = self.contribution_w(top=True).copy()
-                    contr_w = contr_w.style.format({
-                        f"MeanRet ({self.contribution_multiplier_})": Tools.format_pct,
-                        "CumRet": Tools.format_pct
-                    })
+                    contr_w = self.contribution_w_holdings(top=True).copy()
+                    cols = contr_w.columns.difference(['Name', 'Sector'])
+                    contr_w = contr_w.style.format(Tools.format_pct,
+                                                   subset=cols)
                     st.dataframe(contr_w, use_container_width=True)
 
                     st.caption('Bottom Return Contributors')
-                    contr_w = self.contribution_w(top=False).copy()
-                    contr_w = contr_w.style.format({
-                        f"MeanRet ({self.contribution_multiplier_})": Tools.format_pct,
-                        "CumRet": Tools.format_pct
-                    })
+                    contr_w = self.contribution_w_holdings(top=False).copy()
+                    cols = contr_w.columns.difference(['Name', 'Sector'])
+                    contr_w = contr_w.style.format(Tools.format_pct,
+                                                   subset=cols)
                     st.dataframe(contr_w, use_container_width=True)
 
                 with tabs_w[1]:
                     st.caption('Top Return Contributors Plot')
-                    st.plotly_chart(self.contribution_plot_w_ticker(
+                    st.plotly_chart(self.contribution_plot_w_ret(
                         top=True), use_container_width=True)
 
                     st.caption('Bottom Return Contributors Plot')
-                    st.plotly_chart(self.contribution_plot_w_ticker(
+                    st.plotly_chart(self.contribution_plot_w_ret(
                         top=False), use_container_width=True)
 
                 with tabs_w[2]:
-                    st.caption('Top Sector Contribution Plot')
-                    st.plotly_chart(self.contribution_plot_w_sector(
-                        top=True), use_container_width=True)
+                    st.caption('Top/ Bottom Sector Contribution Plot')
+                    st.plotly_chart(self.contribution_plot_w_sector(),
+                                    use_container_width=True)
 
-                    st.caption('Bottom Sector Contribution Plot')
-                    st.plotly_chart(self.contribution_plot_w_sector(
-                        top=False), use_container_width=True)
+                    st.caption('Whole Period Sector Contribution Plot')
+                    st.plotly_chart(self.contribution_plot_w_sector_all(),
+                                    use_container_width=True)
 
+                with tabs_w[3]:
+                    st.caption('Number of Items Invested')
+                    st.plotly_chart(self.contribution_plot_w_nums(),
+                                    use_container_width=True)
+
+                    st.caption('Turnover rate')
+                    st.dataframe(self.contribution_turnover().style.format(Tools.format_pct,
+                                                                           subset=['Y', '6M', 'M', 'D']),
+                                 use_container_width=True)
         else:
             st.warning(
                 "Contribution analysis is skipped since weight data was not uploaded. Please upload weight data to view the contribution analysis.")

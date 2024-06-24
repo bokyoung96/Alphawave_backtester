@@ -18,8 +18,7 @@ class Performance:
     <PARAMS>
     pf_ret: Return of the portfolio.
     bm_ret: Return of the benchmark. If None, bm_ret will not be calculated.
-    performance_multiplier: Multiplier to measure performance with certain frequency.
-    roll_multiplier: Multiplier to measure rolling performance with certain frequency.
+    multiplier: Multiplier to measure performance with certain frequency.
     """
 
     class BMNotAvailableError(Exception):
@@ -612,6 +611,40 @@ class Performance:
         fig.update_xaxes(title_text='3-Month Rolling Return (%)', row=1, col=2)
         return fig
 
+    def performance_plot_rolling_corr(self) -> go.Figure:
+        """
+        <DESCRIPTION>
+        Plot rolling correlation of portfolio and benchmark.
+        """
+        pf_rolling_corr = Tools.get_rolling_ret(ret=self.pf_ret,
+                                                window=self.roll_multiplier,
+                                                multiplier=21,
+                                                roll_type='corr',
+                                                bm_ret=self.bm_ret) if self.bm_ret is not None else None
+        pf_rolling_corr = round(pf_rolling_corr, 4)
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(
+            x=pf_rolling_corr.index,
+            y=pf_rolling_corr.values.flatten(),
+            mode='lines',
+            name='Rolling correlation',
+            line=dict(color='red')
+        ))
+
+        fig.add_hline(y=0,
+                      line=dict(color='rgba(0, 0, 0, 0.5)',
+                                width=1,
+                                dash='dash'))
+
+        fig.update_layout(
+            **Tools.get_common_layout(title=f'Rolling Correlation (Window {self.roll_multiplier_})'),
+            yaxis_title='Correlation',
+            xaxis_title='Date'
+        )
+        return fig
+
     def performance_plot_rolling_sharpe(self) -> go.Figure:
         """
         <DESCRIPTION>
@@ -727,11 +760,11 @@ class Performance:
             'Y').apply(lambda x: (x + 1).prod() - 1)
 
         colors = [
-            'rgba(31, 119, 180, 0.2)',
-            'rgba(31, 119, 180, 0.4)',
-            'rgba(31, 119, 180, 0.6)',
-            'rgba(31, 119, 180, 0.8)',
-            'rgba(31, 119, 180, 1.0)'
+            'rgba(255, 0, 0, 0.2)',
+            'rgba(255, 0, 0, 0.4)',
+            'rgba(255, 0, 0, 0.6)',
+            'rgba(255, 0, 0, 0.8)',
+            'rgba(255, 0, 0, 1.0)'
         ]
 
         fig.add_trace(go.Box(
@@ -801,7 +834,7 @@ class Performance:
         ), row=1, col=2)
 
         fig.update_layout(
-            **Tools.get_common_layout(title="Return Analysis (%)"),
+            **Tools.get_common_layout(title="Return Analysis"),
             yaxis_title='Return (%)',
             xaxis_title='Frequency',
             showlegend=False
