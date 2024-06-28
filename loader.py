@@ -6,8 +6,18 @@ from enum import Enum, unique
 from typing import Type, Callable
 
 
+"""
+<NOTE>
+1. Refactorizing required by minimizing datas to download through using constituent classficiation datas.
+2. Reclassification required for numerous items, considering its characteristics.
+3. DB connection / auto-download / auto-update tools required for further code usage.
+4. File type optimization required for faster code usage.
+"""
+
+
 @unique
 class Market(Enum):
+    KOREA = "KOREA"
     KOSPI = "KOSPI"
     KOSDAQ = "KOSDAQ"
 
@@ -20,6 +30,7 @@ class Asset(Enum):
 
 @unique
 class Frequency(Enum):
+    n = "n"
     d = "1d"
     m = "1m"
     y = "1y"
@@ -38,6 +49,8 @@ class DataPrice(Enum):
     price_l = "price_l"
     price_c = "price_c"
 
+    float_mktcap = "float_mktcap"
+
     def as_price(self,
                  exchange: str,
                  asset: str,
@@ -53,6 +66,27 @@ class DataVolume(Enum):
                   exchange: str,
                   asset: str,
                   frequency: str) -> str:
+        return f"{exchange.value}_{asset.value}_{self.value}_{frequency.value}"
+
+
+@unique
+class DataSector(Enum):
+    sector_wics_big = "sector_wics_big"
+
+    def as_sector(self,
+                  exchange: str,
+                  asset: str,
+                  frequency: str) -> str:
+        return f"{exchange.value}_{asset.value}_{self.value}_{frequency.value}"
+
+
+class DataName(Enum):
+    name = "name"
+
+    def as_name(self,
+                exchange: str,
+                asset: str,
+                frequency: str) -> str:
         return f"{exchange.value}_{asset.value}_{self.value}_{frequency.value}"
 
 
@@ -78,6 +112,7 @@ class DataPool(Enum):
     def __repr__(self):
         return self._value_
 
+    # NOTE: PRICE DATA
     KOSPI_stock_price_o_1d = (DataPrice.price_o, "as_price",
                               Market.KOSPI, Asset.stock, Frequency.d, Source.quantiwise)
     KOSPI_stock_price_h_1d = (DataPrice.price_h, "as_price",
@@ -86,9 +121,23 @@ class DataPool(Enum):
                               Market.KOSPI, Asset.stock, Frequency.d, Source.quantiwise)
     KOSPI_stock_price_c_1d = (DataPrice.price_c, "as_price",
                               Market.KOSPI, Asset.stock, Frequency.d, Source.quantiwise)
+    KOREA_stock_price_c_1d = (DataPrice.price_c, "as_price",
+                              Market.KOREA, Asset.stock, Frequency.d, Source.quantiwise)
 
+    KOSPI_stock_float_mktcap_1d = (
+        DataPrice.float_mktcap, "as_price", Market.KOSPI, Asset.stock, Frequency.d, Source.quantiwise)
+
+    # NOTE: VOLUME DATA
     KOSPI_stock_volume_1d = (DataVolume.volume, "as_volume",
                              Market.KOSPI, Asset.stock, Frequency.d, Source.quantiwise)
+
+    # NOTE: SECTOR DATA
+    KOREA_stock_sector_wics_big_n = (
+        DataSector.sector_wics_big, "as_sector", Market.KOREA, Asset.stock, Frequency.n, Source.quantiwise)
+
+    # NOTE: NAME DATA
+    KOREA_stock_name_n = (DataName.name, "as_name", Market.KOREA,
+                          Asset.stock, Frequency.n, Source.quantiwise)
 
 
 class DataLoader:

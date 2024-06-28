@@ -7,6 +7,7 @@ from matplotlib.colors import to_hex
 from plotly.subplots import make_subplots
 
 from tools import *
+from loader import *
 
 
 class Contribution:
@@ -29,8 +30,8 @@ class Contribution:
                            'M': 21,
                            'D': 1}
         self.contribution_multiplier_ = contribution_multiplier
-        self.multiplier = Tools.validation_params_dict(value=contribution_multiplier,
-                                                       valid_values=multiplier_dict)
+        self.contribution_multiplier = Tools.validation_params_dict(value=contribution_multiplier,
+                                                                    valid_values=multiplier_dict)
 
         self.weight = weight.astype(
             float) if weight is not None else pd.DataFrame()
@@ -38,12 +39,11 @@ class Contribution:
         self.start_date = start_date
         self.end_date = end_date
 
-        # NOTE: Should be refactored afterwards.
-        self.price = pd.read_pickle(
-            './loader_data/KOSPI_stock_price_c_1d_quantiwise.pkl')
-        self.names = pd.read_pickle('./loader_data/KOSPI_names_quantiwise.pkl')
-        self.sectors = pd.read_pickle(
-            './loader_data/KOSPI_sectors_quantiwise.pkl')
+        loader = DataLoader()
+        self.price = loader('KOREA_stock_price_c_1d')
+        self.names = loader('KOREA_stock_name_n')
+        self.sectors = loader('KOREA_stock_sector_wics_big_n')
+        self.mktcap = loader('KOSPI_stock_float_mktcap_1d')
 
     @property
     def w(self) -> pd.DataFrame:
@@ -101,7 +101,7 @@ class Contribution:
         temp_cumret = (temp_w.fillna(0) + 1).cumprod().iloc[-1] - 1
         temp_cumret_ = (temp_w_.fillna(0) + 1).cumprod().iloc[-1] - 1
 
-        ret_mean = ret.mean(axis=0) * self.multiplier
+        ret_mean = ret.mean(axis=0) * self.contribution_multiplier
         ret_cumul = (ret.fillna(0) + 1).cumprod().iloc[-1] - 1
 
         res = pd.DataFrame({
@@ -291,10 +291,10 @@ class Contribution:
     def contribution_plot_w_nums(self) -> go.Figure:
         """
         <DESCRIPTION>
-        Plot the number of stocks invested by timeframe.
+        Plot the number of stocks invested by rebalancing timeframe.
         """
         nums = pd.DataFrame(self.weight.notna().astype(int).sum(axis=1),
-                            columns=['Nums'])
+                            columns=['Nums'])[self.start_date: self.end_date]
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -322,7 +322,8 @@ class Contribution:
         <DESCRIPTION>
         Calculate turnover rate.
         """
-        w_diff = self.w_reidx.diff().abs().sum(axis=1)
+        w_diff = self.w_reidx.diff().abs().sum(
+            axis=1)[self.start_date: self.end_date]
         to_y = w_diff.mean() * 252
         to_6m = w_diff.mean() * 21 * 6
         to_m = w_diff.mean() * 21
@@ -332,6 +333,42 @@ class Contribution:
                            index=['Y', '6M', 'M', 'D'],
                            columns=['Turnover Rate']).T
         return res
+
+    def contribution_mktcap(self) -> go.Figure:
+        """
+        <DESCRIPTION>
+        Plot total floating market cap for the portfolio.
+        """
+        w = self.w_reidx.copy().notna().astype(int)
+        mktcap = self.mktcap[self.start_date: self.end_date][w.columns]
+        mktcap_tf = np.where(mktcap > 1e12, 'Big cap',
+                             np.where(mktcap > 1e11, 'Middle cap',
+                                      np.where(mktcap > 1e10, 'Small cap', mktcap)))
+        temp = pd.DataFrame(mktcap_tf,
+                            index=mktcap.index,
+                            columns=mktcap.columns)
+
+        res = temp.mask((self.w_reidx == 0) | self.w_reidx.isna())
+
+        def calculate_proportions(row) -> pd.DataFrame:
+            total_count = row.notna().sum()
+            if total_count == 0:
+                return pd.Series([0, 0, 0], index=['Small cap', 'Middle cap', 'Big cap'])
+            proportions = row.value_counts(normalize=True).reindex(
+                ['Small cap', 'Middle cap', 'Big cap'], fill_value=0)
+            return proportions
+
+        res = res.apply(calculate_proportions, axis=1)
+
+        fig = px.area(res)
+        fig.update_layout(
+            **Tools.get_common_layout(title='Proportions of Mktcap Over Time'),
+            xaxis_title='Date',
+            yaxis_title='Proportion',
+            xaxis_tickformat='%Y-%m')
+
+        fig.update_yaxes(tickformat=',.0%')
+        return fig
 
 
 if __name__ == "__main__":

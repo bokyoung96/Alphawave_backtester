@@ -557,7 +557,7 @@ class Performance:
             marker_color='red',
             nbinsx=150,
             opacity=0.5,
-            histnorm='probability density'),
+            histnorm='probability'),
             row=1,
             col=1)
         if bm_rolling_ret_1m is not None:
@@ -567,7 +567,7 @@ class Performance:
                 marker_color='black',
                 nbinsx=150,
                 opacity=0.5,
-                histnorm='probability density'),
+                histnorm='probability'),
                 row=1,
                 col=1)
         fig.add_vline(x=pf_rolling_ret_1m.mean().values[0],
@@ -581,7 +581,7 @@ class Performance:
             marker_color='red',
             nbinsx=150,
             opacity=0.5,
-            histnorm='probability density'),
+            histnorm='probability'),
             row=1,
             col=2)
         if bm_rolling_ret_3m is not None:
@@ -591,7 +591,7 @@ class Performance:
                 marker_color='black',
                 nbinsx=150,
                 opacity=0.5,
-                histnorm='probability density'),
+                histnorm='probability'),
                 row=1,
                 col=2)
         fig.add_vline(x=pf_rolling_ret_3m.mean().values[0],
@@ -603,9 +603,9 @@ class Performance:
             **Tools.get_common_layout(title='Rolling Return Histograms'),
             barmode='overlay'
         )
-        fig.update_yaxes(title_text='Probability Density',
+        fig.update_yaxes(title_text='Probability',
                          tickformat='.0%', row=1, col=1)
-        fig.update_yaxes(title_text='Probability Density',
+        fig.update_yaxes(title_text='Probability',
                          tickformat='.0%', row=1, col=2)
         fig.update_xaxes(title_text='1-Month Rolling Return (%)', row=1, col=1)
         fig.update_xaxes(title_text='3-Month Rolling Return (%)', row=1, col=2)
