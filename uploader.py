@@ -116,7 +116,8 @@ class StreamlitUploader(Performance, Contribution):
                 tabs_w = st.tabs(["Return Contributors",
                                   "Return Contributors Plot",
                                   "Sector Contributions",
-                                  "Number Invested / Turnover"])
+                                  "Number Invested / Turnover",
+                                  "Proportion of Market Cap"])
                 with tabs_w[0]:
                     st.caption('Top Return Contributors')
                     contr_w = self.contribution_w_holdings(top=True).copy()
@@ -159,6 +160,18 @@ class StreamlitUploader(Performance, Contribution):
                     st.dataframe(self.contribution_turnover().style.format(Tools.format_pct,
                                                                            subset=['Y', '6M', 'M', 'D']),
                                  use_container_width=True)
+
+                with tabs_w[4]:
+                    st.caption("Proportions of Market Cap")
+                    st.plotly_chart(self.contribution_mktcap(),
+                                    use_container_width=True)
+                    st.caption("""
+                               **Market Cap Classification:**
+                               - **Big Cap:** Over 1 trillion
+                               - **Middle Cap:** Over 100 billion and up to 1 trillion
+                               - **Small Cap:** Under 100 billion
+                               """)
+
         else:
             st.warning(
                 "Contribution analysis is skipped since weight data was not uploaded. Please upload weight data to view the contribution analysis.")
