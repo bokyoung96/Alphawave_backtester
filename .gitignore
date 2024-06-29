@@ -1,3 +1,9 @@
+# Ignore DS_Store
+.DS_Store
+._.DS_Store
+**/.DS_Store
+**/._.DS_Store
+
 # Large files: Contact BKChoi
 loader_data
 
