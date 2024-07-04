@@ -19,6 +19,7 @@ from typing import Type, Callable
 class Market(Enum):
     KOREA = "KOREA"
     KOSPI = "KOSPI"
+    KOSPI200 = "KOSPI200"
     KOSDAQ = "KOSDAQ"
 
 
@@ -38,6 +39,7 @@ class Frequency(Enum):
 
 @unique
 class Source(Enum):
+    dataguide = "dataguide"
     quantiwise = "quantiwise"
     bloomberg = "bloomberg"
 
@@ -80,6 +82,18 @@ class DataSector(Enum):
         return f"{exchange.value}_{asset.value}_{self.value}_{frequency.value}"
 
 
+@unique
+class DataConstituents(Enum):
+    const = "const"
+
+    def as_const(self,
+                 exchange: str,
+                 asset: str,
+                 frequency: str) -> str:
+        return f"{exchange.value}_{asset.value}_{self.value}_{frequency.value}"
+
+
+@unique
 class DataName(Enum):
     name = "name"
 
@@ -134,6 +148,14 @@ class DataPool(Enum):
     # NOTE: SECTOR DATA
     KOREA_stock_sector_wics_big_n = (
         DataSector.sector_wics_big, "as_sector", Market.KOREA, Asset.stock, Frequency.n, Source.quantiwise)
+
+    # NOTE: CONSTITUENT DATA
+    KOSPI_stock_const_n = (
+        DataConstituents.const, "as_const", Market.KOSPI, Asset.stock, Frequency.n, Source.dataguide
+    )
+    KOSPI200_stock_const_n = (
+        DataConstituents.const, "as_const", Market.KOSPI200, Asset.stock, Frequency.n, Source.quantiwise
+    )
 
     # NOTE: NAME DATA
     KOREA_stock_name_n = (DataName.name, "as_name", Market.KOREA,
