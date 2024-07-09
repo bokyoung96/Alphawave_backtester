@@ -4,6 +4,7 @@ import pandas as pd
 
 from enum import Enum, unique
 from typing import Type, Callable
+from concurrent.futures import ProcessPoolExecutor
 
 
 """
@@ -105,6 +106,17 @@ class DataName(Enum):
 
 
 @unique
+class DataETC(Enum):
+    surveilance = "surveilance"
+
+    def as_etc(self,
+               exchange: str,
+               asset: str,
+               frequency: str) -> str:
+        return f"{exchange.value}_{asset.value}_{self.value}_{frequency.value}"
+
+
+@unique
 class DataPool(Enum):
     def __new__(cls,
                 data_class: Type[Enum],
@@ -140,6 +152,8 @@ class DataPool(Enum):
 
     KOSPI_stock_float_mktcap_1d = (
         DataPrice.float_mktcap, "as_price", Market.KOSPI, Asset.stock, Frequency.d, Source.quantiwise)
+    KOREA_stock_float_mktcap_1d = (
+        DataPrice.float_mktcap, "as_price", Market.KOREA, Asset.stock, Frequency.d, Source.quantiwise)
 
     # NOTE: VOLUME DATA
     KOSPI_stock_volume_1d = (DataVolume.volume, "as_volume",
@@ -161,6 +175,10 @@ class DataPool(Enum):
     KOREA_stock_name_n = (DataName.name, "as_name", Market.KOREA,
                           Asset.stock, Frequency.n, Source.quantiwise)
 
+    # NOTE: ETC DATA
+    KOREA_stock_surveilance_1d = (DataETC.surveilance, "as_etc", Market.KOREA,
+                                  Asset.stock, Frequency.d, Source.quantiwise)
+
 
 class DataLoader:
     def __init__(self):
@@ -173,6 +191,31 @@ class DataLoader:
 
         file_path = os.path.join("./loader_data", f"{member.value}.pkl")
         return pd.read_pickle(file_path)
+
+
+class DataInfo:
+    def __init__(self,
+                 directory: str = './loader_data'):
+        self.directory = directory
+
+    def data_info(self) -> None:
+        files = [f for f in os.listdir('./loader_data') if f.endswith('.pkl')]
+
+        with ProcessPoolExecutor() as executor:
+            res = list(executor.map(self.data_info_, files))
+
+        df = pd.DataFrame(res,
+                          columns=['File Name',
+                                   'Size',
+                                   'Date'])
+        return df
+
+    def data_info_(self, file_name: str) -> tuple:
+        file_path = os.path.join(self.directory, file_name)
+        file = pd.read_pickle(file_path)
+        file_shape = file.shape
+        file_date = file.index[-1] if not file.empty else "Empty dataframe"
+        return (file_name, file_shape, file_date)
 
 
 if __name__ == "__main__":
