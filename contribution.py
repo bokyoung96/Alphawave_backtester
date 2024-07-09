@@ -43,7 +43,7 @@ class Contribution:
         self.price = loader('KOREA_stock_price_c_1d')
         self.names = loader('KOREA_stock_name_n')
         self.sectors = loader('KOREA_stock_sector_wics_big_n')
-        self.mktcap = loader('KOSPI_stock_float_mktcap_1d')
+        self.mktcap = loader('KOREA_stock_float_mktcap_1d')
 
     @property
     def w(self) -> pd.DataFrame:
@@ -83,7 +83,7 @@ class Contribution:
 
     def contribution_w_holdings(self, top: bool = True) -> pd.DataFrame:
         """
-        Calculate the contribution of each PDF which user had at least once holded.
+        Calculate the contribution of each PDF which user had at least once held.
 
         Params:
         top: Select whether to show top or the bottom.
@@ -127,7 +127,7 @@ class Contribution:
                                 top: bool = True) -> go.Figure:
         """
         <DESCRIPTION>
-        Plot top contributors of the PDF considering holding periods.
+        Plot top contributors of the PDF considering / not considering holding periods.
 
         <PARAMS>
         top: Select whether to show top or the bottom.
@@ -138,6 +138,7 @@ class Contribution:
         tickers = self.contribution_w_holdings(top=top).index
 
         cumret = round((1 + ret[tickers].fillna(0)).cumprod() - 1, 4)
+        cumret_ = round((1 + ret_temp[tickers].fillna(0)).cumprod() - 1, 4)
         sorted_tickers = cumret.iloc[-1].sort_values(ascending=False).index
 
         cmap = plt.colormaps['coolwarm']
@@ -151,52 +152,20 @@ class Contribution:
                 x=cumret.index,
                 y=cumret[ticker],
                 mode='lines',
-                name=ticker,
-                line=dict(width=1, color=colors[-(idx + 1)])
+                name=f"{ticker} (Invested)",
+                legendgroup=ticker,
+                line=dict(width=2, color=colors[-(idx + 1)]),
+                visible='legendonly'
             ))
 
-        if top:
-            fig.update_layout(**Tools.get_common_layout(title='Top Return Contributors'),
-                              yaxis_title='Cumulative Return',
-                              xaxis_title='Year')
-        else:
-            fig.update_layout(**Tools.get_common_layout(title='Bottom Return Contributors'),
-                              yaxis_title='Cumulative Return',
-                              xaxis_title='Year')
-        return fig
-
-    def contribution_plot_w_ticker(self,
-                                   top: bool = True) -> go.Figure:
-        """
-        <DESCRIPTION>
-        Plot top contributors of the PDF.
-
-        <PARAMS>
-        top: Select whether to show top or the bottom.
-
-        <NOTE>
-        Not used temporarily.
-        """
-        tickers = self.contribution_w_holdings(top=top).index
-        price = self.price[tickers].loc[self.start_date: self.end_date]
-        ret = price.pct_change(fill_method=None, axis=0)
-        cumret = (1 + ret.fillna(0)).cumprod(axis=0)
-
-        sorted_tickers = cumret.iloc[-1].sort_values(ascending=False).index
-
-        cmap = plt.colormaps['coolwarm']
-        colors = [to_hex(cmap(i / (len(sorted_tickers) - 1)))
-                  for i in range(len(sorted_tickers))]
-
-        fig = go.Figure()
-
-        for idx, ticker in enumerate(sorted_tickers):
             fig.add_trace(go.Scatter(
-                x=cumret.index,
-                y=cumret[ticker],
+                x=cumret_.index,
+                y=cumret_[ticker],
                 mode='lines',
-                name=ticker,
-                line=dict(width=1, color=colors[-(idx + 1)])
+                name=f"{ticker} (Raw)",
+                legendgroup=ticker,
+                line=dict(width=2, dash='dot', color=colors[-(idx + 1)]),
+                visible='legendonly'
             ))
 
         if top:
@@ -207,7 +176,6 @@ class Contribution:
             fig.update_layout(**Tools.get_common_layout(title='Bottom Return Contributors'),
                               yaxis_title='Cumulative Return',
                               xaxis_title='Year')
-
         return fig
 
     def contribution_plot_w_sector(self) -> go.Figure:
@@ -322,7 +290,7 @@ class Contribution:
         <DESCRIPTION>
         Calculate turnover rate.
         """
-        w_diff = self.w_reidx.diff().abs().sum(
+        w_diff = self.w_reidx.fillna(0).diff().abs().sum(
             axis=1)[self.start_date: self.end_date]
         to_y = w_diff.mean() * 252
         to_6m = w_diff.mean() * 21 * 6

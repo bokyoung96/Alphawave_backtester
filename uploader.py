@@ -160,6 +160,11 @@ class StreamlitUploader(Performance, Contribution):
                     st.dataframe(self.contribution_turnover().style.format(Tools.format_pct,
                                                                            subset=['Y', '6M', 'M', 'D']),
                                  use_container_width=True)
+                    st.caption("""
+                               **Be cautious of your rebalancing scheme:**
+                               - Turnover rate is calculated assuming daily rebalancing basis.
+                               - Weight dataframe is forced to be changed into daily rebalancing basis.
+                               """)
 
                 with tabs_w[4]:
                     st.caption("Proportions of Market Cap")
@@ -170,6 +175,8 @@ class StreamlitUploader(Performance, Contribution):
                                - **Big Cap:** Over 1 trillion
                                - **Middle Cap:** Over 100 billion and up to 1 trillion
                                - **Small Cap:** Under 100 billion
+                               
+                               **Be cautious of your rebalancing scheme whether it is month-end or not.**
                                """)
 
         else:

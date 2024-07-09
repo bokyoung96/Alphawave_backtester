@@ -11,6 +11,7 @@ def run():
     """
     <DESCRIPTION>
     Run uploader for streamlit server connection.
+    Progress will be taken in command tools, by [streamlit run run.py] on its location.
     """
     st.set_page_config(layout='wide')
     st.markdown("<h1 style='text-align: center; color: black; font-size: 24px;'>Upload Data</h1>",
@@ -55,7 +56,7 @@ def run():
         ```
 
     **Caution:**
-    - Only **long-only KOSPI stock analysis** is currently supported.
+    - **Long-only KOSPI / KOSDAQ stock analysis** is currently supported.
     - If the `skip` checkbox is checked, contribution analysis will not be performed.
     - The `Date` column should contain only the dates that are within the portfolio test period.
         """)
